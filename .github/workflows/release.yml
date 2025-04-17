@@ -32,37 +32,32 @@ jobs:
             asset_name: json-core-macos-arm64
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Prepare asset
         shell: bash
         run: |
           mkdir -p release
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} release/${{ matrix.asset_name }}
-          else
-            cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} release/${{ matrix.asset_name }}
+          cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} release/${{ matrix.asset_name }}
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then
             chmod +x release/${{ matrix.asset_name }}
           fi
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
           path: release/${{ matrix.asset_name }}
+          if-no-files-found: error
 
   create-release:
     needs: build
@@ -70,13 +65,15 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            json-core-windows-x64.exe
-            json-core-linux-x64
-            json-core-macos-x64
-            json-core-macos-arm64
+            artifacts/json-core-windows-x64.exe/json-core-windows-x64.exe
+            artifacts/json-core-linux-x64/json-core-linux-x64
+            artifacts/json-core-macos-x64/json-core-macos-x64
+            artifacts/json-core-macos-arm64/json-core-macos-arm64
